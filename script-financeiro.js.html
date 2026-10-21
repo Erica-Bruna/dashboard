@@ -3,28 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Financeiro | REACH</title>
-    <!-- Tailwind CSS para estilização rápida e limpa -->
+    <title>FinanceFlow | REACH</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Chart.js para os gráficos -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS para leitura de arquivos Excel (.xlsx / .csv) -->
+    <!-- SheetJS para Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Cores customizadas de laranja */
-        :root {
-            --primary-orange: #FF6600;
-            --primary-hover: #E65C00;
-        }
     </style>
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 dark:bg-[#0f0f0f] dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
+<body class="bg-[#0f0f0f] text-gray-100 min-h-screen flex flex-col">
 
-    <!-- HEADER / BARRA SUPERIOR -->
-    <header class="w-full border-b border-gray-800 dark:border-gray-800 bg-[#141414] dark:bg-[#141414] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <!-- HEADER -->
+    <header class="w-full border-b border-gray-800 bg-[#141414] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-lg bg-[#FF6600] flex items-center justify-center font-bold text-black text-lg">R</div>
             <div>
@@ -34,19 +29,11 @@
         </div>
 
         <div class="flex items-center gap-4">
-            <!-- Botão Upload de Planilha -->
             <label class="cursor-pointer bg-[#FF6600] hover:bg-[#E65C00] text-black font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                 Carregar Planilha (Excel/CSV)
                 <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="processarExcel(event)">
             </label>
-
-            <!-- Botão Dark/Light Mode -->
-            <button onclick="toggleTheme()" class="p-2 rounded-lg border border-gray-700 hover:border-gray-500 text-gray-300 transition" title="Alternar Tema">
-                <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-            </button>
         </div>
     </header>
 
@@ -75,7 +62,7 @@
                 <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Saldo Líquido</span>
                 <div class="flex items-baseline justify-between mt-2">
                     <span id="kpiSaldo" class="text-2xl font-bold text-white">R$ 0,00</span>
-                    <span id="kpiSaldoBadge" class="text-xs px-2 py-0.5 rounded">Balanço</span>
+                    <span class="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded">Balanço</span>
                 </div>
             </div>
 
@@ -88,49 +75,37 @@
             </div>
         </div>
 
-        <!-- SEÇÃO DE FILTROS E BUSCA -->
+        <!-- FILTROS E BUSCA -->
         <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-3 flex-1">
-                <!-- Barra de Pesquisa -->
                 <div class="relative min-w-[240px] flex-1">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    </span>
-                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente, fornecedor ou descrição..." class="w-full bg-[#121214] border border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600] transition">
+                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
                 </div>
-
-                <!-- Filtro por Tipo -->
-                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                     <option value="todos">Todos os Tipos</option>
                     <option value="Receber">Contas a Receber</option>
                     <option value="Pagar">Contas a Pagar</option>
                 </select>
-
-                <!-- Filtro por Status -->
-                <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                     <option value="todos">Todos os Status</option>
-                    <option value="Pendente">Pendente</option>
+                    <option value="Pendente">Pendente / A Vencer</option>
                     <option value="Pago">Pago / Recebido</option>
-                    <option value="Vencido">Vencido</option>
+                    <option value="Vencido">Vencido / Atrasado</option>
                 </select>
             </div>
-
             <div class="text-xs text-gray-400">
                 Mostrando <span id="contadorRegistros" class="font-semibold text-white">0</span> registros
             </div>
         </div>
 
-        <!-- GRÁFICOS E VISUALIZAÇÕES -->
+        <!-- GRÁFICOS -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Gráfico de Fluxo -->
             <div class="lg:col-span-2 bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
                 <h3 class="text-sm font-semibold text-gray-200 mb-4">Fluxo Geral (Receitas vs Despesas)</h3>
                 <div class="relative flex-1 w-full h-64">
                     <canvas id="chartFluxo"></canvas>
                 </div>
             </div>
-
-            <!-- Gráfico de Status -->
             <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
                 <h3 class="text-sm font-semibold text-gray-200 mb-4">Status das Contas</h3>
                 <div class="relative flex-1 w-full h-64 flex items-center justify-center">
@@ -139,11 +114,10 @@
             </div>
         </div>
 
-        <!-- TABELA DETALHADA -->
+        <!-- TABELA -->
         <div class="bg-[#18181b] border border-gray-800 rounded-xl overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
                 <h3 class="text-sm font-semibold text-gray-200">Detalhamento dos Lançamentos</h3>
-                <span class="text-xs text-gray-400">Rolagem habilitada</span>
             </div>
             <div class="overflow-x-auto max-h-[400px]">
                 <table class="w-full text-left border-collapse text-sm">
@@ -151,74 +125,31 @@
                         <tr>
                             <th class="px-5 py-3 font-medium">Vencimento</th>
                             <th class="px-5 py-3 font-medium">Cliente / Fornecedor</th>
-                            <th class="px-5 py-3 font-medium">Descrição</th>
+                            <th class="px-5 py-3 font-medium">Categoria / Histórico</th>
                             <th class="px-5 py-3 font-medium">Tipo</th>
                             <th class="px-5 py-3 font-medium">Valor</th>
                             <th class="px-5 py-3 font-medium">Status</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaDados" class="divide-y divide-gray-800 text-gray-300">
-                        <!-- Preenchido via JavaScript -->
                     </tbody>
                 </table>
             </div>
         </div>
-
     </main>
 
-    <!-- RODAPÉ -->
-    <footer class="w-full text-center py-4 border-t border-gray-800 text-xs text-gray-500 mt-auto">
-        FinanceFlow REACH • Desenvolvido com foco em produtividade e elegância.
-    </footer>
-
-    <!-- SCRIPT DE LÓGICA E INTERATIVIDADE -->
+    <!-- SCRIPT DE LEITURA DO OMIE -->
     <script>
-        // Dados de Exemplo (Fallback inicial)
-        let dadosGlobais = [
-            { data: '2026-10-01', entidade: 'Tech Solutions Ltda', desc: 'Licenciamento de Software', tipo: 'Receber', valor: 4500.00, status: 'Pago' },
-            { data: '2026-10-05', entidade: 'Escritório Contábil', desc: 'Honorários Contábeis', tipo: 'Pagar', valor: 1200.00, status: 'Pendente' },
-            { data: '2026-10-10', entidade: 'Construtora Alpha', desc: 'Consultoria de Processos', tipo: 'Receber', valor: 7800.00, status: 'Pendente' },
-            { data: '2026-10-12', entidade: 'Provedor de Internet', desc: 'Link Dedicado Fibra', tipo: 'Pagar', valor: 350.00, status: 'Pago' },
-            { data: '2026-10-15', entidade: 'Marina Souza', desc: 'Projeto de Dashboard', tipo: 'Receber', valor: 3200.00, status: 'Vencido' },
-            { data: '2026-10-18', entidade: 'Aluguel Comercial', desc: 'Locação da Sala 402', tipo: 'Pagar', valor: 2500.00, status: 'Pendente' },
-            { data: '2026-10-22', entidade: 'Global Imports', desc: 'Venda de Equipamentos', tipo: 'Receber', valor: 9400.00, status: 'Pendente' },
-            { data: '2026-10-25', entidade: 'Concessionária Energia', desc: 'Conta de Luz', tipo: 'Pagar', valor: 680.00, status: 'Vencido' }
-        ];
-
+        let dadosGlobais = [];
         let chartFluxoInstancia = null;
         let chartStatusInstancia = null;
 
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
-            aplicarFiltros();
-        });
-
-        // Alternância de Tema Claro / Escuro
-        function toggleTheme() {
-            const html = document.documentElement;
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                document.body.className = "bg-gray-100 text-gray-900 transition-colors duration-300 min-h-screen flex flex-col";
-                atualizarEstilosCards(true);
-            } else {
-                html.classList.add('dark');
-                document.body.className = "bg-[#0f0f0f] text-gray-100 transition-colors duration-300 min-h-screen flex flex-col";
-                atualizarEstilosCards(false);
-            }
-            aplicarFiltros();
+        function parseValor(valor) {
+            if (!valor) return 0;
+            if (typeof valor === 'number') return valor;
+            return parseFloat(valor.toString().replace(/\./g, '').replace(',', '.')) || 0;
         }
 
-        function atualizarEstilosCards(isLight) {
-            document.querySelectorAll('.bg-\\[\\#18181b\\]').forEach(el => {
-                el.className = el.className.replace(/bg-\\[\\#18181b\\]|bg-white/g, isLight ? 'bg-white' : 'bg-[#18181b]');
-                el.className = el.className.replace(/border-gray-800|border-gray-200/g, isLight ? 'border-gray-200' : 'border-gray-800');
-            });
-            document.querySelectorAll('header, thead, .bg-\\[\\#121214\\]').forEach(el => {
-                el.className = el.className.replace(/bg-\\[\\#121214\\]|bg-gray-50/g, isLight ? 'bg-gray-50' : 'bg-[#121214]');
-            });
-        }
-
-        // Leitura de Planilha Excel / CSV via SheetJS
         function processarExcel(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -229,27 +160,96 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                if (json.length > 0) {
-                    dadosGlobais = json.map(row => ({
-                        data: row.Data || row.Vencimento || row.DATA || '2026-10-01',
-                        entidade: row.Cliente_Fornecedor || row.Cliente || row.Fornecedor || row.Entidade || 'Desconhecido',
-                        desc: row.Descricao || row.Descrição || row.Historico || 'Sem descrição',
-                        tipo: (row.Tipo || row.TIPO || 'Receber').toString().trim(),
-                        valor: parseFloat(row.Valor || row.VALOR || 0),
-                        status: row.Status || row.STATUS || 'Pendente'
-                    }));
-                    aplicarFiltros();
-                    alert('Planilha carregada com sucesso!');
-                } else {
-                    alert('A planilha parece estar vazia.');
+                if (json.length < 3) {
+                    alert('A planilha parece não ter o formato padrão do Omie.');
+                    return;
                 }
+
+                // Identifica a linha de cabeçalho do Omie (geralmente linha 2 ou 3)
+                let cabecalhoIdx = 0;
+                for (let i = 0; i < Math.min(json.length, 5); i++) {
+                    const linhaStr = JSON.stringify(json[i]).toLowerCase();
+                    if (linhaStr.includes('vencimento') && (linhaStr.includes('valor') || linhaStr.includes('situação'))) {
+                        cabecalhoIdx = i;
+                        break;
+                    }
+                }
+
+                const headers = json[cabecalhoIdx];
+                const linhasDados = json.slice(cabecalhoIdx + 1);
+
+                dadosGlobais = linhasDados.map(row => {
+                    const obj = {};
+                    headers.forEach((h, index) => {
+                        if (h) obj[h.toString().trim()] = row[index];
+                    });
+                    return obj;
+                }).filter(item => {
+                    // Filtra linhas válidas que possuem vencimento ou valor
+                    const chaves = Object.keys(item);
+                    return chaves.some(k => item[k] !== undefined && item[k] !== '');
+                });
+
+                mapearDadosOmie();
+                aplicarFiltros();
+                alert('Planilha carregada e processada com sucesso!');
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // Filtros e Atualização da Interface
+        function mapearDadosOmie() {
+            dadosGlobais = dadosGlobais.map(item => {
+                const chaves = Object.keys(item);
+                const getCol = (nomes) => {
+                    for (let nome of nomes) {
+                        const encontrada = chaves.find(k => k.toLowerCase().includes(nome.toLowerCase()));
+                        if (encontrada && item[encontrada] !== undefined) return item[encontrada];
+                    }
+                    return '';
+                };
+
+                const entidade = getCol(['Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
+                const vencimento = getCol(['Vencimento', 'Previsão']) || '2026-10-01';
+                const categoria = getCol(['Categoria', 'Observação', 'Histórico']) || 'Geral';
+                const situacao = getCol(['Situação', 'Status']) || 'Pendente';
+                const valor = parseValor(getCol(['Valor da Conta', 'Valor do Título', 'Valor']));
+                
+                // Descobre se é Pagar ou Receber com base nas colunas ou nome das chaves
+                let tipo = 'Receber';
+                const colStr = chaves.join(' ').toLowerCase();
+                if (colStr.includes('pagar') || getCol(['Fornecedor'])) {
+                    tipo = 'Pagar';
+                }
+
+                // Normaliza status
+                let statusNorm = 'Pendente';
+                const sitLower = situacao.toString().toLowerCase();
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+                
+                const dataVen = new Date(vencimento);
+
+                if (sitLower.includes('pago') || sitLower.includes('recebido') || sitLower.includes('liquidado')) {
+                    statusNorm = 'Pago';
+                } else if (sitLower.includes('atrasado') || (dataVen < hoje && !isNaN(dataVen))) {
+                    statusNorm = 'Vencido';
+                } else {
+                    statusNorm = 'Pendente';
+                }
+
+                return {
+                    data: vencimento.toString().split(' ')[0],
+                    entidade: entidade,
+                    desc: categoria,
+                    tipo: tipo,
+                    valor: valor,
+                    status: statusNorm
+                };
+            });
+        }
+
         function aplicarFiltros() {
             const busca = document.getElementById('searchInput').value.toLowerCase();
             const tipoFiltro = document.getElementById('filtroTipo').value;
@@ -268,22 +268,15 @@
             document.getElementById('contadorRegistros').innerText = dadosFiltrados.length;
         }
 
-        // Atualizar Cards de Resumo (KPIs)
         function atualizarKPIs(dados) {
             let totalReceber = 0;
             let totalPagar = 0;
             let totalVencido = 0;
 
             dados.forEach(item => {
-                const val = Number(item.valor) || 0;
-                if (item.tipo.toLowerCase() === 'receber') {
-                    totalReceber += val;
-                } else {
-                    totalPagar += val;
-                }
-                if (item.status.toLowerCase() === 'vencido') {
-                    totalVencido += val;
-                }
+                if (item.tipo === 'Receber') totalReceber += item.valor;
+                if (item.tipo === 'Pagar') totalPagar += item.valor;
+                if (item.status === 'Vencido') totalVencido += item.valor;
             });
 
             const saldoLiquido = totalReceber - totalPagar;
@@ -294,16 +287,14 @@
 
             const elSaldo = document.getElementById('kpiSaldo');
             elSaldo.innerText = formatarMoeda(saldoLiquido);
-            elSaldo.className = `text-2xl font-bold ${saldoLiquido >= 0 ? 'text-white' : 'text-orange-400'}`;
         }
 
-        // Preencher Tabela HTML
         function atualizarTabela(dados) {
             const tbody = document.getElementById('tabelaDados');
             tbody.innerHTML = '';
 
             if (dados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado. Carregue uma planilha do Omie.</td></tr>`;
                 return;
             }
 
@@ -312,16 +303,15 @@
                 tr.className = "hover:bg-white/5 transition-colors";
 
                 let statusBadge = '';
-                const st = item.status.toLowerCase();
-                if (st === 'pago' || st === 'recebido') {
+                if (item.status === 'Pago') {
                     statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">Pago</span>';
-                } else if (st === 'vencido') {
+                } else if (item.status === 'Vencido') {
                     statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-red-950 text-red-400 border border-red-800/50">Vencido</span>';
                 } else {
                     statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-yellow-950 text-yellow-400 border border-yellow-800/50">Pendente</span>';
                 }
 
-                const tipoBadge = item.tipo.toLowerCase() === 'receber' 
+                const tipoBadge = item.tipo === 'Receber' 
                     ? '<span class="text-emerald-400 font-medium">Receber</span>' 
                     : '<span class="text-orange-400 font-medium">Pagar</span>';
 
@@ -337,16 +327,14 @@
             });
         }
 
-        // Gráficos com Chart.js
         function atualizarGraficos(dados) {
-            let totalRec = dados.filter(d => d.tipo.toLowerCase() === 'receber').reduce((acc, curr) => acc + curr.valor, 0);
-            let totalPag = dados.filter(d => d.tipo.toLowerCase() === 'pagar').reduce((acc, curr) => acc + curr.valor, 0);
+            let totalRec = dados.filter(d => d.tipo === 'Receber').reduce((acc, curr) => acc + curr.valor, 0);
+            let totalPag = dados.filter(d => d.tipo === 'Pagar').reduce((acc, curr) => acc + curr.valor, 0);
 
-            let qtdPendentes = dados.filter(d => d.status.toLowerCase() === 'pendente').length;
-            let qtdPagos = dados.filter(d => ['pago', 'recebido'].includes(d.status.toLowerCase())).length;
-            let qtdVencidos = dados.filter(d => d.status.toLowerCase() === 'vencido').length;
+            let qtdPendentes = dados.filter(d => d.status === 'Pendente').length;
+            let qtdPagos = dados.filter(d => d.status === 'Pago').length;
+            let qtdVencidos = dados.filter(d => d.status === 'Vencido').length;
 
-            // Gráfico de Barras (Fluxo)
             const ctxFluxo = document.getElementById('chartFluxo').getContext('2d');
             if (chartFluxoInstancia) chartFluxoInstancia.destroy();
             
@@ -372,7 +360,6 @@
                 }
             });
 
-            // Gráfico de Rosca (Status)
             const ctxStatus = document.getElementById('chartStatus').getContext('2d');
             if (chartStatusInstancia) chartStatusInstancia.destroy();
 
