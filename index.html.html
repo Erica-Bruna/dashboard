@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceFlow | REACH</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS para Excel/CSV -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="w-full border-b border-gray-800 bg-[#141414] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-[#FF6600] flex items-center justify-center font-bold text-black text-lg">R</div>
+            <div>
+                <h1 class="font-semibold text-base tracking-tight">FinanceFlow <span class="text-[#FF6600] font-light">REACH</span></h1>
+                <p class="text-xs text-gray-400">Contas a Receber & Pagar</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <label class="cursor-pointer bg-[#FF6600] hover:bg-[#E65C00] text-black font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Carregar Planilha (Excel/CSV)
+                <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="processarExcel(event)">
+            </label>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- CARDS DE RESUMO (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total a Receber</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiReceber" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span class="text-xs text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/50">Receitas</span>
+                </div>
+            </div>
+
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total a Pagar</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiPagar" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span class="text-xs text-orange-400 bg-orange-950/50 px-2 py-0.5 rounded border border-orange-800/50">Despesas</span>
+                </div>
+            </div>
+
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Saldo Líquido</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiSaldo" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span class="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded">Balanço</span>
+                </div>
+            </div>
+
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Vencido</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiVencido" class="text-2xl font-bold text-red-400">R$ 0,00</span>
+                    <span class="text-xs text-red-400 bg-red-950/50 px-2 py-0.5 rounded border border-red-800/50">Atenção</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTROS E BUSCA -->
+        <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 flex-1">
+                <div class="relative min-w-[240px] flex-1">
+                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                </div>
+                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
+                    <option value="todos">Todos os Tipos</option>
+                    <option value="Receber">Contas a Receber</option>
+                    <option value="Pagar">Contas a Pagar</option>
+                </select>
+                <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
+                    <option value="todos">Todos os Status</option>
+                    <option value="Pendente">Pendente / A Vencer</option>
+                    <option value="Pago">Pago / Recebido</option>
+                    <option value="Vencido">Vencido / Atrasado</option>
+                </select>
+            </div>
+            <div class="text-xs text-gray-400">
+                Mostrando <span id="contadorRegistros" class="font-semibold text-white">0</span> registros
+            </div>
+        </div>
+
+        <!-- GRÁFICOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
+                <h3 class="text-sm font-semibold text-gray-200 mb-4">Fluxo Geral (Receitas vs Despesas)</h3>
+                <div class="relative flex-1 w-full h-64">
+                    <canvas id="chartFluxo"></canvas>
+                </div>
+            </div>
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
+                <h3 class="text-sm font-semibold text-gray-200 mb-4">Status das Contas</h3>
+                <div class="relative flex-1 w-full h-64 flex items-center justify-center">
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABELA -->
+        <div class="bg-[#18181b] border border-gray-800 rounded-xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-sm font-semibold text-gray-200">Detalhamento dos Lançamentos</h3>
+            </div>
+            <div class="overflow-x-auto max-h-[400px]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-[#121214] text-gray-400 uppercase text-xs sticky top-0 border-b border-gray-800">
+                        <tr>
+                            <th class="px-5 py-3 font-medium">Vencimento</th>
+                            <th class="px-5 py-3 font-medium">Cliente / Fornecedor</th>
+                            <th class="px-5 py-3 font-medium">Categoria / Histórico</th>
+                            <th class="px-5 py-3 font-medium">Tipo</th>
+                            <th class="px-5 py-3 font-medium">Valor</th>
+                            <th class="px-5 py-3 font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaDados" class="divide-y divide-gray-800 text-gray-300">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- SCRIPT DE LEITURA DO OMIE -->
+    <script>
+        let dadosGlobais = [];
+        let chartFluxoInstancia = null;
+        let chartStatusInstancia = null;
+
+        function parseValor(valor) {
+            if (!valor) return 0;
+            if (typeof valor === 'number') return valor;
+            return parseFloat(valor.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function processarExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                if (json.length < 3) {
+                    alert('A planilha parece não ter o formato padrão do Omie.');
+                    return;
+                }
+
+                let cabecalhoIdx = 0;
+                for (let i = 0; i < Math.min(json.length, 5); i++) {
+                    const linhaStr = JSON.stringify(json[i]).toLowerCase();
+                    if (linhaStr.includes('vencimento') && (linhaStr.includes('valor') || linhaStr.includes('situação'))) {
+                        cabecalhoIdx = i;
+                        break;
+                    }
+                }
+
+                const headers = json[cabecalhoIdx];
+                const linhasDados = json.slice(cabecalhoIdx + 1);
+
+                dadosGlobais = linhasDados.map(row => {
+                    const obj = {};
+                    headers.forEach((h, index) => {
+                        if (h) obj[h.toString().trim()] = row[index];
+                    });
+                    return obj;
+                }).filter(item => {
+                    const chaves = Object.keys(item);
+                    return chaves.some(k => item[k] !== undefined && item[k] !== '');
+                });
+
+                mapearDadosOmie();
+                aplicarFiltros();
+                alert('Planilha carregada e processada com sucesso!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function mapearDadosOmie() {
+            dadosGlobais = dadosGlobais.map(item => {
+                const chaves = Object.keys(item);
+                const getCol = (nomes) => {
+                    for (let nome of nomes) {
+                        const encontrada = chaves.find(k => k.toLowerCase().includes(nome.toLowerCase()));
+                        if (encontrada && item[encontrada] !== undefined) return item[encontrada];
+                    }
+                    return '';
+                };
+
+                const entidade = getCol(['Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
+                const vencimento = getCol(['Vencimento', 'Previsão']) || '2026-10-01';
+                const categoria = getCol(['Categoria', 'Observação', 'Histórico']) || 'Geral';
+                const situacao = getCol(['Situação', 'Status']) || 'Pendente';
+                const valor = parseValor(getCol(['Valor da Conta', 'Valor do Título', 'Valor']));
+                
+                let tipo = 'Receber';
+                const colStr = chaves.join(' ').toLowerCase();
+                if (colStr.includes('pagar') || getCol(['Fornecedor'])) {
+                    tipo = 'Pagar';
+                }
+
+                let statusNorm = 'Pendente';
+                const sitLower = situacao.toString().toLowerCase();
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+                
+                const dataVen = new Date(vencimento);
+
+                if (sitLower.includes('pago') || sitLower.includes('recebido') || sitLower.includes('liquidado')) {
+                    statusNorm = 'Pago';
+                } else if (sitLower.includes('atrasado') || (dataVen < hoje && !isNaN(dataVen))) {
+                    statusNorm = 'Vencido';
+                } else {
+                    statusNorm = 'Pendente';
+                }
+
+                return {
+                    data: vencimento.toString().split(' ')[0],
+                    entidade: entidade,
+                    desc: categoria,
+                    tipo: tipo,
+                    valor: valor,
+                    status: statusNorm
+                };
+            });
+        }
+
+        function aplicarFiltros() {
+            const busca = document.getElementById('searchInput').value.toLowerCase();
+            const tipoFiltro = document.getElementById('filtroTipo').value;
+            const statusFiltro = document.getElementById('filtroStatus').value;
+
+            const dadosFiltrados = dadosGlobais.filter(item => {
+                const matchBusca = item.entidade.toLowerCase().includes(busca) || item.desc.toLowerCase().includes(busca);
+                const matchTipo = tipoFiltro === 'todos' || item.tipo.toLowerCase() === tipoFiltro.toLowerCase();
+                const matchStatus = statusFiltro === 'todos' || item.status.toLowerCase() === statusFiltro.toLowerCase();
+                return matchBusca && matchTipo && matchStatus;
+            });
+
+            atualizarKPIs(dadosFiltrados);
+            atualizarTabela(dadosFiltrados);
+            atualizarGraficos(dadosFiltrados);
+            document.getElementById('contadorRegistros').innerText = dadosFiltrados.length;
+        }
+
+        function atualizarKPIs(dados) {
+            let totalReceber = 0;
+            let totalPagar = 0;
+            let totalVencido = 0;
+
+            dados.forEach(item => {
+                if (item.tipo === 'Receber') totalReceber += item.valor;
+                if (item.tipo === 'Pagar') totalPagar += item.valor;
+                if (item.status === 'Vencido') totalVencido += item.valor;
+            });
+
+            const saldoLiquido = totalReceber - totalPagar;
+
+            document.getElementById('kpiReceber').innerText = formatarMoeda(totalReceber);
+            document.getElementById('kpiPagar').innerText = formatarMoeda(totalPagar);
+            document.getElementById('kpiVencido').innerText = formatarMoeda(totalVencido);
+
+            const elSaldo = document.getElementById('kpiSaldo');
+            elSaldo.innerText = formatarMoeda(saldoLiquido);
+        }
+
+        function atualizarTabela(dados) {
+            const tbody = document.getElementById('tabelaDados');
+            tbody.innerHTML = '';
+
+            if (dados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado. Carregue uma planilha do Omie.</td></tr>`;
+                return;
+            }
+
+            dados.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors";
+
+                let statusBadge = '';
+                if (item.status === 'Pago') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">Pago</span>';
+                } else if (item.status === 'Vencido') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-red-950 text-red-400 border border-red-800/50">Vencido</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-yellow-950 text-yellow-400 border border-yellow-800/50">Pendente</span>';
+                }
+
+                const tipoBadge = item.tipo === 'Receber' 
+                    ? '<span class="text-emerald-400 font-medium">Receber</span>' 
+                    : '<span class="text-orange-400 font-medium">Pagar</span>';
+
+                tr.innerHTML = `
+                    <td class="px-5 py-3.5 text-gray-400 text-xs">${item.data}</td>
+                    <td class="px-5 py-3.5 font-medium">${item.entidade}</td>
+                    <td class="px-5 py-3.5 text-gray-400">${item.desc}</td>
+                    <td class="px-5 py-3.5">${tipoBadge}</td>
+                    <td class="px-5 py-3.5 font-semibold">${formatarMoeda(item.valor)}</td>
+                    <td class="px-5 py-3.5">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function atualizarGraficos(dados) {
+            let totalRec = dados.filter(d => d.tipo === 'Receber').reduce((acc, curr) => acc + curr.valor, 0);
+            let totalPag = dados.filter(d => d.tipo === 'Pagar').reduce((acc, curr) => acc + curr.valor, 0);
+
+            let qtdPendentes = dados.filter(d => d.status === 'Pendente').length;
+            let qtdPagos = dados.filter(d => d.status === 'Pago').length;
+            let qtdVencidos = dados.filter(d => d.status === 'Vencido').length;
+
+            const ctxFluxo = document.getElementById('chartFluxo').getContext('2d');
+            if (chartFluxoInstancia) chartFluxoInstancia.destroy();
+            
+            chartFluxoInstancia = new Chart(ctxFluxo, {
+                type: 'bar',
+                data: {
+                    labels: ['Contas a Receber', 'Contas a Pagar'],
+                    datasets: [{
+                        data: [totalRec, totalPag],
+                        backgroundColor: ['#10B981', '#FF6600'],
+                        borderRadius: 6,
+                        barThickness: 45
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#888' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } }
+                    }
+                }
+            });
+
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            if (chartStatusInstancia) chartStatusInstancia.destroy();
+
+            chartStatusInstancia = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pendentes', 'Pagos/Recebidos', 'Vencidos'],
+                    datasets: [{
+                        data: [qtdPendentes, qtdPagos, qtdVencidos],
+                        backgroundColor: ['#F59E0B', '#10B981', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#aaa', boxWidth: 12 } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+    </script>
+</body>
+</html>
