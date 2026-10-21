@@ -1,160 +1,405 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <title>Visão Geral Financeira - Omie</title>
-  <!-- Chart.js para os gráficos -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- PapaParse para ler os CSVs publicados do Google Sheets -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <style>
-    :root {
-      --bg-color: #121212;
-      --card-bg: #1A1A1A;
-      --border-color: #2A2A2A;
-      --primary-orange: #E85D17;
-      --text-main: #FFFFFF;
-      --text-muted: #A0A0A0;
-    }
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: var(--primary-orange);
-      margin-bottom: 25px;
-    }
-    .filtros-container {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 30px;
-      background: var(--card-bg);
-      padding: 15px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-    }
-    .kpi-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-    .kpi-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-    }
-    .kpi-card h3 {
-      font-size: 0.9em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-    .kpi-card .valor {
-      font-size: 1.6em;
-      font-weight: bold;
-      color: var(--text-main);
-    }
-    .main-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 900px) {
-      .main-grid { grid-template-columns: 1fr; }
-    }
-    .painel-box {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    th, td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.9em;
-    }
-    th {
-      color: var(--primary-orange);
-      font-weight: 600;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financeiro | REACH</title>
+    <!-- Tailwind CSS para estilização rápida e limpa -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS para leitura de arquivos Excel (.xlsx / .csv) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Cores customizadas de laranja */
+        :root {
+            --primary-orange: #FF6600;
+            --primary-hover: #E65C00;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-[#0f0f0f] text-gray-100 dark:bg-[#0f0f0f] dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
 
-  <h1>Contas a Pagar REACH</h1>
+    <!-- HEADER / BARRA SUPERIOR -->
+    <header class="w-full border-b border-gray-800 dark:border-gray-800 bg-[#141414] dark:bg-[#141414] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-[#FF6600] flex items-center justify-center font-bold text-black text-lg">R</div>
+            <div>
+                <h1 class="font-semibold text-base tracking-tight">FinanceFlow <span class="text-[#FF6600] font-light">REACH</span></h1>
+                <p class="text-xs text-gray-400">Contas a Receber & Pagar</p>
+            </div>
+        </div>
 
-  <!-- Filtro de Datas -->
-  <div class="filtros-container">
-    <div>
-      <label>De:</label>
-      <input type="date" id="filtro-data-inicio" onchange="carregarDashboardFinanceiro()">
-    </div>
-    <div>
-      <label>Até:</label>
-      <input type="date" id="filtro-data-fim" onchange="carregarDashboardFinanceiro()">
-    </div>
-  </div>
+        <div class="flex items-center gap-4">
+            <!-- Botão Upload de Planilha -->
+            <label class="cursor-pointer bg-[#FF6600] hover:bg-[#E65C00] text-black font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Carregar Planilha (Excel/CSV)
+                <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="processarExcel(event)">
+            </label>
 
-  <!-- Cards de KPIs -->
-  <div class="kpi-container">
-    <div class="kpi-card">
-      <h3>Total a Pagar (Período)</h3>
-      <div class="valor" id="kpi-total-pagar" style="color: #3498db;">R$ 0,00</div>
-    </div>
-    <div class="kpi-card">
-      <h3>Total Pago (Caixa)</h3>
-      <div class="valor" id="kpi-total-pago" style="color: #E85D17;">R$ 0,00</div>
-    </div>
-    <div class="kpi-card">
-      <h3>Total Atrasado (Pagar)</h3>
-      <div class="valor" id="kpi-total-atrasado-pagar" style="color: #e74c3c;">R$ 0,00</div>
-    </div>
-  </div>
+            <!-- Botão Dark/Light Mode -->
+            <button onclick="toggleTheme()" class="p-2 rounded-lg border border-gray-700 hover:border-gray-500 text-gray-300 transition" title="Alternar Tema">
+                <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
 
-  <!-- Grid Principal (Tabela + Gráfico de Despesas por Categoria) -->
-  <div class="main-grid">
-    <div class="painel-box">
-      <h3 id="titulo-tabela-pagar" style="margin-top:0; color: var(--primary-orange);">Contas a Pagar</h3>
-      <div style="overflow-x: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>Fornecedor</th>
-              <th>Categoria</th>
-              <th>Vencimento</th>
-              <th>Documento</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody id="tb-pagar">
-            <!-- Preenchido via JavaScript -->
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
 
-    <div class="painel-box">
-      <h3 style="margin-top:0; color: var(--primary-orange); text-align: center;">Despesas por Categoria</h3>
-      <div style="position: relative; height: 300px; display: flex; justify-content: center; align-items: center;">
-        <canvas id="graficoDespesasPizza"></canvas>
-      </div>
-    </div>
-  </div>
+        <!-- CARDS DE RESUMO (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total a Receber</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiReceber" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span class="text-xs text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/50">Receitas</span>
+                </div>
+            </div>
 
-  <!-- Script JavaScript -->
-  <script src="script-financeiro.js"></script>
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total a Pagar</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiPagar" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span class="text-xs text-orange-400 bg-orange-950/50 px-2 py-0.5 rounded border border-orange-800/50">Despesas</span>
+                </div>
+            </div>
+
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Saldo Líquido</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiSaldo" class="text-2xl font-bold text-white">R$ 0,00</span>
+                    <span id="kpiSaldoBadge" class="text-xs px-2 py-0.5 rounded">Balanço</span>
+                </div>
+            </div>
+
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Vencido</span>
+                <div class="flex items-baseline justify-between mt-2">
+                    <span id="kpiVencido" class="text-2xl font-bold text-red-400">R$ 0,00</span>
+                    <span class="text-xs text-red-400 bg-red-950/50 px-2 py-0.5 rounded border border-red-800/50">Atenção</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO DE FILTROS E BUSCA -->
+        <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 flex-1">
+                <!-- Barra de Pesquisa -->
+                <div class="relative min-w-[240px] flex-1">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </span>
+                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente, fornecedor ou descrição..." class="w-full bg-[#121214] border border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600] transition">
+                </div>
+
+                <!-- Filtro por Tipo -->
+                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                    <option value="todos">Todos os Tipos</option>
+                    <option value="Receber">Contas a Receber</option>
+                    <option value="Pagar">Contas a Pagar</option>
+                </select>
+
+                <!-- Filtro por Status -->
+                <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                    <option value="todos">Todos os Status</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Pago">Pago / Recebido</option>
+                    <option value="Vencido">Vencido</option>
+                </select>
+            </div>
+
+            <div class="text-xs text-gray-400">
+                Mostrando <span id="contadorRegistros" class="font-semibold text-white">0</span> registros
+            </div>
+        </div>
+
+        <!-- GRÁFICOS E VISUALIZAÇÕES -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Gráfico de Fluxo -->
+            <div class="lg:col-span-2 bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
+                <h3 class="text-sm font-semibold text-gray-200 mb-4">Fluxo Geral (Receitas vs Despesas)</h3>
+                <div class="relative flex-1 w-full h-64">
+                    <canvas id="chartFluxo"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico de Status -->
+            <div class="bg-[#18181b] border border-gray-800 rounded-xl p-5 flex flex-col">
+                <h3 class="text-sm font-semibold text-gray-200 mb-4">Status das Contas</h3>
+                <div class="relative flex-1 w-full h-64 flex items-center justify-center">
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABELA DETALHADA -->
+        <div class="bg-[#18181b] border border-gray-800 rounded-xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-sm font-semibold text-gray-200">Detalhamento dos Lançamentos</h3>
+                <span class="text-xs text-gray-400">Rolagem habilitada</span>
+            </div>
+            <div class="overflow-x-auto max-h-[400px]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-[#121214] text-gray-400 uppercase text-xs sticky top-0 border-b border-gray-800">
+                        <tr>
+                            <th class="px-5 py-3 font-medium">Vencimento</th>
+                            <th class="px-5 py-3 font-medium">Cliente / Fornecedor</th>
+                            <th class="px-5 py-3 font-medium">Descrição</th>
+                            <th class="px-5 py-3 font-medium">Tipo</th>
+                            <th class="px-5 py-3 font-medium">Valor</th>
+                            <th class="px-5 py-3 font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaDados" class="divide-y divide-gray-800 text-gray-300">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- RODAPÉ -->
+    <footer class="w-full text-center py-4 border-t border-gray-800 text-xs text-gray-500 mt-auto">
+        FinanceFlow REACH • Desenvolvido com foco em produtividade e elegância.
+    </footer>
+
+    <!-- SCRIPT DE LÓGICA E INTERATIVIDADE -->
+    <script>
+        // Dados de Exemplo (Fallback inicial)
+        let dadosGlobais = [
+            { data: '2026-10-01', entidade: 'Tech Solutions Ltda', desc: 'Licenciamento de Software', tipo: 'Receber', valor: 4500.00, status: 'Pago' },
+            { data: '2026-10-05', entidade: 'Escritório Contábil', desc: 'Honorários Contábeis', tipo: 'Pagar', valor: 1200.00, status: 'Pendente' },
+            { data: '2026-10-10', entidade: 'Construtora Alpha', desc: 'Consultoria de Processos', tipo: 'Receber', valor: 7800.00, status: 'Pendente' },
+            { data: '2026-10-12', entidade: 'Provedor de Internet', desc: 'Link Dedicado Fibra', tipo: 'Pagar', valor: 350.00, status: 'Pago' },
+            { data: '2026-10-15', entidade: 'Marina Souza', desc: 'Projeto de Dashboard', tipo: 'Receber', valor: 3200.00, status: 'Vencido' },
+            { data: '2026-10-18', entidade: 'Aluguel Comercial', desc: 'Locação da Sala 402', tipo: 'Pagar', valor: 2500.00, status: 'Pendente' },
+            { data: '2026-10-22', entidade: 'Global Imports', desc: 'Venda de Equipamentos', tipo: 'Receber', valor: 9400.00, status: 'Pendente' },
+            { data: '2026-10-25', entidade: 'Concessionária Energia', desc: 'Conta de Luz', tipo: 'Pagar', valor: 680.00, status: 'Vencido' }
+        ];
+
+        let chartFluxoInstancia = null;
+        let chartStatusInstancia = null;
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            aplicarFiltros();
+        });
+
+        // Alternância de Tema Claro / Escuro
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                document.body.className = "bg-gray-100 text-gray-900 transition-colors duration-300 min-h-screen flex flex-col";
+                atualizarEstilosCards(true);
+            } else {
+                html.classList.add('dark');
+                document.body.className = "bg-[#0f0f0f] text-gray-100 transition-colors duration-300 min-h-screen flex flex-col";
+                atualizarEstilosCards(false);
+            }
+            aplicarFiltros();
+        }
+
+        function atualizarEstilosCards(isLight) {
+            document.querySelectorAll('.bg-\\[\\#18181b\\]').forEach(el => {
+                el.className = el.className.replace(/bg-\\[\\#18181b\\]|bg-white/g, isLight ? 'bg-white' : 'bg-[#18181b]');
+                el.className = el.className.replace(/border-gray-800|border-gray-200/g, isLight ? 'border-gray-200' : 'border-gray-800');
+            });
+            document.querySelectorAll('header, thead, .bg-\\[\\#121214\\]').forEach(el => {
+                el.className = el.className.replace(/bg-\\[\\#121214\\]|bg-gray-50/g, isLight ? 'bg-gray-50' : 'bg-[#121214]');
+            });
+        }
+
+        // Leitura de Planilha Excel / CSV via SheetJS
+        function processarExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length > 0) {
+                    dadosGlobais = json.map(row => ({
+                        data: row.Data || row.Vencimento || row.DATA || '2026-10-01',
+                        entidade: row.Cliente_Fornecedor || row.Cliente || row.Fornecedor || row.Entidade || 'Desconhecido',
+                        desc: row.Descricao || row.Descrição || row.Historico || 'Sem descrição',
+                        tipo: (row.Tipo || row.TIPO || 'Receber').toString().trim(),
+                        valor: parseFloat(row.Valor || row.VALOR || 0),
+                        status: row.Status || row.STATUS || 'Pendente'
+                    }));
+                    aplicarFiltros();
+                    alert('Planilha carregada com sucesso!');
+                } else {
+                    alert('A planilha parece estar vazia.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Filtros e Atualização da Interface
+        function aplicarFiltros() {
+            const busca = document.getElementById('searchInput').value.toLowerCase();
+            const tipoFiltro = document.getElementById('filtroTipo').value;
+            const statusFiltro = document.getElementById('filtroStatus').value;
+
+            const dadosFiltrados = dadosGlobais.filter(item => {
+                const matchBusca = item.entidade.toLowerCase().includes(busca) || item.desc.toLowerCase().includes(busca);
+                const matchTipo = tipoFiltro === 'todos' || item.tipo.toLowerCase() === tipoFiltro.toLowerCase();
+                const matchStatus = statusFiltro === 'todos' || item.status.toLowerCase() === statusFiltro.toLowerCase();
+                return matchBusca && matchTipo && matchStatus;
+            });
+
+            atualizarKPIs(dadosFiltrados);
+            atualizarTabela(dadosFiltrados);
+            atualizarGraficos(dadosFiltrados);
+            document.getElementById('contadorRegistros').innerText = dadosFiltrados.length;
+        }
+
+        // Atualizar Cards de Resumo (KPIs)
+        function atualizarKPIs(dados) {
+            let totalReceber = 0;
+            let totalPagar = 0;
+            let totalVencido = 0;
+
+            dados.forEach(item => {
+                const val = Number(item.valor) || 0;
+                if (item.tipo.toLowerCase() === 'receber') {
+                    totalReceber += val;
+                } else {
+                    totalPagar += val;
+                }
+                if (item.status.toLowerCase() === 'vencido') {
+                    totalVencido += val;
+                }
+            });
+
+            const saldoLiquido = totalReceber - totalPagar;
+
+            document.getElementById('kpiReceber').innerText = formatarMoeda(totalReceber);
+            document.getElementById('kpiPagar').innerText = formatarMoeda(totalPagar);
+            document.getElementById('kpiVencido').innerText = formatarMoeda(totalVencido);
+
+            const elSaldo = document.getElementById('kpiSaldo');
+            elSaldo.innerText = formatarMoeda(saldoLiquido);
+            elSaldo.className = `text-2xl font-bold ${saldoLiquido >= 0 ? 'text-white' : 'text-orange-400'}`;
+        }
+
+        // Preencher Tabela HTML
+        function atualizarTabela(dados) {
+            const tbody = document.getElementById('tabelaDados');
+            tbody.innerHTML = '';
+
+            if (dados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+
+            dados.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors";
+
+                let statusBadge = '';
+                const st = item.status.toLowerCase();
+                if (st === 'pago' || st === 'recebido') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">Pago</span>';
+                } else if (st === 'vencido') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-red-950 text-red-400 border border-red-800/50">Vencido</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-yellow-950 text-yellow-400 border border-yellow-800/50">Pendente</span>';
+                }
+
+                const tipoBadge = item.tipo.toLowerCase() === 'receber' 
+                    ? '<span class="text-emerald-400 font-medium">Receber</span>' 
+                    : '<span class="text-orange-400 font-medium">Pagar</span>';
+
+                tr.innerHTML = `
+                    <td class="px-5 py-3.5 text-gray-400 text-xs">${item.data}</td>
+                    <td class="px-5 py-3.5 font-medium">${item.entidade}</td>
+                    <td class="px-5 py-3.5 text-gray-400">${item.desc}</td>
+                    <td class="px-5 py-3.5">${tipoBadge}</td>
+                    <td class="px-5 py-3.5 font-semibold">${formatarMoeda(item.valor)}</td>
+                    <td class="px-5 py-3.5">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Gráficos com Chart.js
+        function atualizarGraficos(dados) {
+            let totalRec = dados.filter(d => d.tipo.toLowerCase() === 'receber').reduce((acc, curr) => acc + curr.valor, 0);
+            let totalPag = dados.filter(d => d.tipo.toLowerCase() === 'pagar').reduce((acc, curr) => acc + curr.valor, 0);
+
+            let qtdPendentes = dados.filter(d => d.status.toLowerCase() === 'pendente').length;
+            let qtdPagos = dados.filter(d => ['pago', 'recebido'].includes(d.status.toLowerCase())).length;
+            let qtdVencidos = dados.filter(d => d.status.toLowerCase() === 'vencido').length;
+
+            // Gráfico de Barras (Fluxo)
+            const ctxFluxo = document.getElementById('chartFluxo').getContext('2d');
+            if (chartFluxoInstancia) chartFluxoInstancia.destroy();
+            
+            chartFluxoInstancia = new Chart(ctxFluxo, {
+                type: 'bar',
+                data: {
+                    labels: ['Contas a Receber', 'Contas a Pagar'],
+                    datasets: [{
+                        data: [totalRec, totalPag],
+                        backgroundColor: ['#10B981', '#FF6600'],
+                        borderRadius: 6,
+                        barThickness: 45
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#888' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } }
+                    }
+                }
+            });
+
+            // Gráfico de Rosca (Status)
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            if (chartStatusInstancia) chartStatusInstancia.destroy();
+
+            chartStatusInstancia = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pendentes', 'Pagos/Recebidos', 'Vencidos'],
+                    datasets: [{
+                        data: [qtdPendentes, qtdPagos, qtdVencidos],
+                        backgroundColor: ['#F59E0B', '#10B981', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#aaa', boxWidth: 12 } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+    </script>
 </body>
 </html>
