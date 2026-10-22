@@ -75,21 +75,23 @@
             </div>
         </div>
 
-        <!-- FILTROS E BUSCA ORGANIZADOS -->
-        <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 flex flex-col gap-4">
+        <!-- BARRA DE FILTROS E DATAS -->
+        <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
+                <!-- Busca -->
                 <div class="flex-1 min-w-[260px]">
-                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
+                    <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
                 </div>
                 
+                <!-- Filtros Tipo e Status -->
                 <div class="flex items-center gap-2">
-                    <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none">
+                    <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                         <option value="todos">Todos os Tipos</option>
                         <option value="Receber">Contas a Receber</option>
                         <option value="Pagar">Contas a Pagar</option>
                     </select>
 
-                    <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none">
+                    <select id="filtroStatus" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                         <option value="todos">Todos os Status</option>
                         <option value="Pendente">Pendente / A Vencer</option>
                         <option value="Pago">Pago / Recebido</option>
@@ -98,14 +100,14 @@
                 </div>
             </div>
 
-            <!-- Linha de Datas -->
-            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-800/60">
+            <!-- Filtros de Período (Data Inicial e Final) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-800">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 bg-[#121214] border border-gray-800 rounded-lg px-3 py-1.5">
                         <span class="text-xs text-gray-400 font-medium">De:</span>
                         <input type="date" id="dataInicio" onchange="aplicarFiltros()" class="bg-transparent text-sm text-gray-200 focus:outline-none">
                     </div>
-                    <span class="text-gray-600">-</span>
+                    <span class="text-gray-500">até</span>
                     <div class="flex items-center gap-2 bg-[#121214] border border-gray-800 rounded-lg px-3 py-1.5">
                         <span class="text-xs text-gray-400 font-medium">Até:</span>
                         <input type="date" id="dataFim" onchange="aplicarFiltros()" class="bg-transparent text-sm text-gray-200 focus:outline-none">
@@ -158,7 +160,7 @@
         </div>
     </main>
 
-    <!-- SCRIPT DE LEITURA ROBUSTO -->
+    <!-- SCRIPT DE PROCESSAMENTO CORRIGIDO -->
     <script>
         let dadosGlobais = [];
         let chartFluxoInstancia = null;
@@ -199,6 +201,7 @@
                     return;
                 }
 
+                // Procura a linha de cabeçalho
                 let cabecalhoIdx = 0;
                 for (let i = 0; i < Math.min(json.length, 5); i++) {
                     const linhaStr = JSON.stringify(json[i]).toLowerCase();
@@ -237,6 +240,7 @@
                 const anoAtual = hoje.getFullYear();
                 const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
                 
+                // Define o mês atual como padrão para evitar poluição visual com dados antigos
                 document.getElementById('dataInicio').value = `${anoAtual}-${mesAtual}-01`;
                 document.getElementById('dataFim').value = `${anoAtual}-${mesAtual}-31`;
             }
@@ -245,9 +249,11 @@
         function mapearDadosOmie() {
             dadosGlobais = dadosGlobais.map(item => {
                 const chaves = Object.keys(item);
+                
+                // Função auxiliar robusta para buscar colunas independentemente de maiúsculas/minúsculas
                 const getCol = (nomes) => {
                     for (let nome of nomes) {
-                        const encontrada = chaves.find(k => k.toLowerCase().includes(nome.toLowerCase()));
+                        const encontrada = chaves.find(k => k.toLowerCase() === nome.toLowerCase() || k.toLowerCase().includes(nome.toLowerCase()));
                         if (encontrada && item[encontrada] !== undefined && item[encontrada] !== '') return item[encontrada];
                     }
                     return '';
@@ -261,16 +267,17 @@
                 const situacao = getCol(['Situação', 'Status']) || 'Pendente';
                 const valor = parseValor(getCol(['Valor', 'Valor da Conta', 'Valor do Título', 'Valor Líquido']));
                 
+                // Tratamento correto do Tipo (Receber vs Pagar)
                 let tipoBruto = getCol(['Tipo']) || '';
                 let tipo = 'Receber';
-                
                 const tipoStr = tipoBruto.toString().toLowerCase();
+
                 if (tipoStr.includes('pagar') || tipoStr.includes('pag') || tipoStr.includes('despesa')) {
                     tipo = 'Pagar';
                 } else if (tipoStr.includes('receber') || tipoStr.includes('rec') || tipoStr.includes('receita')) {
                     tipo = 'Receber';
                 } else {
-                    // Se não tiver coluna "Tipo" explícita, deduz pelo nome da coluna ou fornecedor
+                    // Fallback: se não tiver coluna 'Tipo', verifica se tem fornecedor
                     const colStr = chaves.join(' ').toLowerCase();
                     if (colStr.includes('fornecedor') || getCol(['Fornecedor (Nome Fantasia)'])) {
                         tipo = 'Pagar';
