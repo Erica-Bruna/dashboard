@@ -138,7 +138,7 @@
         </div>
     </main>
 
-    <!-- SCRIPT DE LEITURA DO OMIE -->
+    <!-- SCRIPT DE LEITURA COMPATÍVEL COM PLANILHA MÃE -->
     <script>
         let dadosGlobais = [];
         let chartFluxoInstancia = null;
@@ -162,15 +162,16 @@
                 const worksheet = workbook.Sheets[firstSheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                if (json.length < 3) {
-                    alert('A planilha parece não ter o formato padrão do Omie.');
+                if (json.length < 2) {
+                    alert('A planilha parece estar vazia.');
                     return;
                 }
 
+                // Identifica a linha de cabeçalho
                 let cabecalhoIdx = 0;
                 for (let i = 0; i < Math.min(json.length, 5); i++) {
                     const linhaStr = JSON.stringify(json[i]).toLowerCase();
-                    if (linhaStr.includes('vencimento') && (linhaStr.includes('valor') || linhaStr.includes('situação'))) {
+                    if (linhaStr.includes('vencimento') || linhaStr.includes('entidade') || linhaStr.includes('valor')) {
                         cabecalhoIdx = i;
                         break;
                     }
@@ -192,7 +193,7 @@
 
                 mapearDadosOmie();
                 aplicarFiltros();
-                alert('Planilha carregada e processada com sucesso!');
+                alert('Planilha Mãe carregada e processada com sucesso!');
             };
             reader.readAsArrayBuffer(file);
         }
@@ -203,21 +204,28 @@
                 const getCol = (nomes) => {
                     for (let nome of nomes) {
                         const encontrada = chaves.find(k => k.toLowerCase().includes(nome.toLowerCase()));
-                        if (encontrada && item[encontrada] !== undefined) return item[encontrada];
+                        if (encontrada && item[encontrada] !== undefined && item[encontrada] !== '') return item[encontrada];
                     }
                     return '';
                 };
 
-                const entidade = getCol(['Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
+                // Suporta colunas da Planilha Mãe e também relatórios brutos do Omie
+                const entidade = getCol(['Entidade', 'Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
                 const vencimento = getCol(['Vencimento', 'Previsão']) || '2026-10-01';
                 const categoria = getCol(['Categoria', 'Observação', 'Histórico']) || 'Geral';
                 const situacao = getCol(['Situação', 'Status']) || 'Pendente';
-                const valor = parseValor(getCol(['Valor da Conta', 'Valor do Título', 'Valor']));
+                const valor = parseValor(getCol(['Valor', 'Valor da Conta', 'Valor do Título', 'Valor Líquido']));
                 
+                let tipoBruto = getCol(['Tipo']) || '';
                 let tipo = 'Receber';
-                const colStr = chaves.join(' ').toLowerCase();
-                if (colStr.includes('pagar') || getCol(['Fornecedor'])) {
+                
+                if (tipoBruto.toString().toLowerCase().includes('pagar') || tipoBruto.toString().toLowerCase().includes('pag')) {
                     tipo = 'Pagar';
+                } else {
+                    const colStr = chaves.join(' ').toLowerCase();
+                    if (colStr.includes('pagar') && !colStr.includes('receber')) {
+                        tipo = 'Pagar';
+                    }
                 }
 
                 let statusNorm = 'Pendente';
@@ -225,7 +233,8 @@
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
                 
-                const dataVen = new Date(vencimento);
+                let dataVenStr = vencimento.toString().split(' ')[0];
+                const dataVen = new Date(dataVenStr);
 
                 if (sitLower.includes('pago') || sitLower.includes('recebido') || sitLower.includes('liquidado')) {
                     statusNorm = 'Pago';
@@ -236,7 +245,7 @@
                 }
 
                 return {
-                    data: vencimento.toString().split(' ')[0],
+                    data: dataVenStr,
                     entidade: entidade,
                     desc: categoria,
                     tipo: tipo,
@@ -290,7 +299,7 @@
             tbody.innerHTML = '';
 
             if (dados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado. Carregue uma planilha do Omie.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
                 return;
             }
 
