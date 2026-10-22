@@ -78,9 +78,20 @@
         <!-- FILTROS E BUSCA -->
         <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-3 flex-1">
-                <div class="relative min-w-[240px] flex-1">
+                <div class="relative min-w-[200px] flex-1">
                     <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
                 </div>
+                
+                <!-- Filtros de Data -->
+                <div class="flex items-center gap-2 bg-[#121214] border border-gray-800 rounded-lg px-3 py-1.5">
+                    <span class="text-xs text-gray-400">De:</span>
+                    <input type="date" id="dataInicio" onchange="aplicarFiltros()" class="bg-transparent text-sm text-gray-200 focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2 bg-[#121214] border border-gray-800 rounded-lg px-3 py-1.5">
+                    <span class="text-xs text-gray-400">Até:</span>
+                    <input type="date" id="dataFim" onchange="aplicarFiltros()" class="bg-transparent text-sm text-gray-200 focus:outline-none">
+                </div>
+
                 <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                     <option value="todos">Todos os Tipos</option>
                     <option value="Receber">Contas a Receber</option>
@@ -138,7 +149,7 @@
         </div>
     </main>
 
-    <!-- SCRIPT DE LEITURA COMPATÍVEL COM PLANILHA MÃE -->
+    <!-- SCRIPT DE LEITURA COM FILTROS DE DATA -->
     <script>
         let dadosGlobais = [];
         let chartFluxoInstancia = null;
@@ -148,6 +159,18 @@
             if (!valor) return 0;
             if (typeof valor === 'number') return valor;
             return parseFloat(valor.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function serialParaData(serial) {
+            if (!serial) return '';
+            if (typeof serial === 'string' && serial.includes('-')) {
+                return serial.split('T')[0];
+            }
+            const num = parseFloat(serial);
+            if (isNaN(num)) return serial.toString().split(' ')[0];
+            const dataBase = new Date(1899, 11, 30);
+            dataBase.setDate(dataBase.getDate() + num);
+            return dataBase.toISOString().split('T')[0];
         }
 
         function processarExcel(e) {
@@ -167,7 +190,6 @@
                     return;
                 }
 
-                // Identifica a linha de cabeçalho
                 let cabecalhoIdx = 0;
                 for (let i = 0; i < Math.min(json.length, 5); i++) {
                     const linhaStr = JSON.stringify(json[i]).toLowerCase();
@@ -192,10 +214,27 @@
                 });
 
                 mapearDadosOmie();
+                
+                // Definir período padrão inicial (ex: mês atual ou ano corrente) para evitar tela muito cheia
+                definirDatasPadrao();
+                
                 aplicarFiltros();
-                alert('Planilha Mãe carregada e processada com sucesso!');
+                alert('Planilha Mãe carregada com sucesso!');
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        function definirDatasPadrao() {
+            const datas = dadosGlobais.map(d => d.data).filter(d => d && d !== '').sort();
+            if (datas.length > 0) {
+                // Pega o mês/ano atual ou o mais recente da planilha
+                const hoje = new Date();
+                const anoAtual = hoje.getFullYear();
+                const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+                
+                document.getElementById('dataInicio').value = `${anoAtual}-${mesAtual}-01`;
+                document.getElementById('dataFim').value = `${anoAtual}-${mesAtual}-31`;
+            }
         }
 
         function mapearDadosOmie() {
@@ -209,9 +248,10 @@
                     return '';
                 };
 
-                // Suporta colunas da Planilha Mãe e também relatórios brutos do Omie
                 const entidade = getCol(['Entidade', 'Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
-                const vencimento = getCol(['Vencimento', 'Previsão']) || '2026-10-01';
+                const vencimentoBruto = getCol(['Vencimento', 'Previsão']);
+                const dataFormatada = serialParaData(vencimentoBruto) || '2026-10-01';
+                
                 const categoria = getCol(['Categoria', 'Observação', 'Histórico']) || 'Geral';
                 const situacao = getCol(['Situação', 'Status']) || 'Pendente';
                 const valor = parseValor(getCol(['Valor', 'Valor da Conta', 'Valor do Título', 'Valor Líquido']));
@@ -233,8 +273,7 @@
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
                 
-                let dataVenStr = vencimento.toString().split(' ')[0];
-                const dataVen = new Date(dataVenStr);
+                const dataVen = new Date(dataFormatada);
 
                 if (sitLower.includes('pago') || sitLower.includes('recebido') || sitLower.includes('liquidado')) {
                     statusNorm = 'Pago';
@@ -245,7 +284,7 @@
                 }
 
                 return {
-                    data: dataVenStr,
+                    data: dataFormatada,
                     entidade: entidade,
                     desc: categoria,
                     tipo: tipo,
@@ -257,6 +296,8 @@
 
         function aplicarFiltros() {
             const busca = document.getElementById('searchInput').value.toLowerCase();
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
             const tipoFiltro = document.getElementById('filtroTipo').value;
             const statusFiltro = document.getElementById('filtroStatus').value;
 
@@ -264,7 +305,12 @@
                 const matchBusca = item.entidade.toLowerCase().includes(busca) || item.desc.toLowerCase().includes(busca);
                 const matchTipo = tipoFiltro === 'todos' || item.tipo.toLowerCase() === tipoFiltro.toLowerCase();
                 const matchStatus = statusFiltro === 'todos' || item.status.toLowerCase() === statusFiltro.toLowerCase();
-                return matchBusca && matchTipo && matchStatus;
+                
+                let matchData = true;
+                if (dataInicio && item.data < dataInicio) matchData = false;
+                if (dataFim && item.data > dataFim) matchData = false;
+
+                return matchBusca && matchTipo && matchStatus && matchData;
             });
 
             atualizarKPIs(dadosFiltrados);
@@ -289,9 +335,7 @@
             document.getElementById('kpiReceber').innerText = formatarMoeda(totalReceber);
             document.getElementById('kpiPagar').innerText = formatarMoeda(totalPagar);
             document.getElementById('kpiVencido').innerText = formatarMoeda(totalVencido);
-
-            const elSaldo = document.getElementById('kpiSaldo');
-            elSaldo.innerText = formatarMoeda(saldoLiquido);
+            document.getElementById('kpiSaldo').innerText = formatarMoeda(saldoLiquido);
         }
 
         function atualizarTabela(dados) {
@@ -299,7 +343,7 @@
             tbody.innerHTML = '';
 
             if (dados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">Nenhum registro encontrado para este período.</td></tr>`;
                 return;
             }
 
