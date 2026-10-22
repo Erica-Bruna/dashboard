@@ -78,12 +78,10 @@
         <!-- BARRA DE FILTROS E DATAS -->
         <div class="bg-[#18181b] border border-gray-800 rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <!-- Busca -->
                 <div class="flex-1 min-w-[260px]">
                     <input type="text" id="searchInput" oninput="aplicarFiltros()" placeholder="Pesquisar cliente ou fornecedor..." class="w-full bg-[#121214] border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#FF6600]">
                 </div>
                 
-                <!-- Filtros Tipo e Status -->
                 <div class="flex items-center gap-2">
                     <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-[#121214] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                         <option value="todos">Todos os Tipos</option>
@@ -100,7 +98,7 @@
                 </div>
             </div>
 
-            <!-- Filtros de Período (Data Inicial e Final) -->
+            <!-- Filtros de Período -->
             <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-800">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 bg-[#121214] border border-gray-800 rounded-lg px-3 py-1.5">
@@ -160,7 +158,7 @@
         </div>
     </main>
 
-    <!-- SCRIPT DE PROCESSAMENTO CORRIGIDO -->
+    <!-- SCRIPT DE PROCESSAMENTO DIRETO -->
     <script>
         let dadosGlobais = [];
         let chartFluxoInstancia = null;
@@ -201,18 +199,8 @@
                     return;
                 }
 
-                // Procura a linha de cabeçalho
-                let cabecalhoIdx = 0;
-                for (let i = 0; i < Math.min(json.length, 5); i++) {
-                    const linhaStr = JSON.stringify(json[i]).toLowerCase();
-                    if (linhaStr.includes('vencimento') || linhaStr.includes('entidade') || linhaStr.includes('tipo') || linhaStr.includes('valor')) {
-                        cabecalhoIdx = i;
-                        break;
-                    }
-                }
-
-                const headers = json[cabecalhoIdx];
-                const linhasDados = json.slice(cabecalhoIdx + 1);
+                const headers = json[0]; // Linha 0 é o cabeçalho exato da Planilha Mãe
+                const linhasDados = json.slice(1);
 
                 dadosGlobais = linhasDados.map(row => {
                     const obj = {};
@@ -220,12 +208,9 @@
                         if (h) obj[h.toString().trim()] = row[index];
                     });
                     return obj;
-                }).filter(item => {
-                    const chaves = Object.keys(item);
-                    return chaves.some(k => item[k] !== undefined && item[k] !== '');
-                });
+                }).filter(item => item['Valor'] !== undefined || item['Entidade'] !== undefined);
 
-                mapearDadosOmie();
+                mapearDadosPlanilhaMae();
                 definirDatasPadrao();
                 aplicarFiltros();
                 alert('Planilha Mãe carregada e processada com sucesso!');
@@ -240,55 +225,27 @@
                 const anoAtual = hoje.getFullYear();
                 const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
                 
-                // Define o mês atual como padrão para evitar poluição visual com dados antigos
                 document.getElementById('dataInicio').value = `${anoAtual}-${mesAtual}-01`;
                 document.getElementById('dataFim').value = `${anoAtual}-${mesAtual}-31`;
             }
         }
 
-        function mapearDadosOmie() {
+        function mapearDadosPlanilhaMae() {
             dadosGlobais = dadosGlobais.map(item => {
-                const chaves = Object.keys(item);
+                const tipoOriginal = (item['Tipo'] || 'Receber').toString().trim();
+                const entidade = item['Entidade'] || 'Não Identificado';
+                const vencimentoBruto = item['Vencimento'] || '2026-10-01';
+                const dataFormatada = serialParaData(vencimentoBruto);
+                const categoria = item['Categoria'] || 'Geral';
+                const situacao = item['Situação'] || 'Pendente';
+                const valor = parseValor(item['Valor']);
                 
-                // Função auxiliar robusta para buscar colunas independentemente de maiúsculas/minúsculas
-                const getCol = (nomes) => {
-                    for (let nome of nomes) {
-                        const encontrada = chaves.find(k => k.toLowerCase() === nome.toLowerCase() || k.toLowerCase().includes(nome.toLowerCase()));
-                        if (encontrada && item[encontrada] !== undefined && item[encontrada] !== '') return item[encontrada];
-                    }
-                    return '';
-                };
-
-                const entidade = getCol(['Entidade', 'Cliente (Nome Fantasia)', 'Fornecedor (Nome Fantasia)', 'Cliente', 'Fornecedor']) || 'Não Identificado';
-                const vencimentoBruto = getCol(['Vencimento', 'Previsão', 'Previsão de Recebimento', 'Previsão de Pagamento']);
-                const dataFormatada = serialParaData(vencimentoBruto) || '2026-10-01';
-                
-                const categoria = getCol(['Categoria', 'Observação', 'Histórico']) || 'Geral';
-                const situacao = getCol(['Situação', 'Status']) || 'Pendente';
-                const valor = parseValor(getCol(['Valor', 'Valor da Conta', 'Valor do Título', 'Valor Líquido']));
-                
-                // Tratamento correto do Tipo (Receber vs Pagar)
-                let tipoBruto = getCol(['Tipo']) || '';
-                let tipo = 'Receber';
-                const tipoStr = tipoBruto.toString().toLowerCase();
-
-                if (tipoStr.includes('pagar') || tipoStr.includes('pag') || tipoStr.includes('despesa')) {
-                    tipo = 'Pagar';
-                } else if (tipoStr.includes('receber') || tipoStr.includes('rec') || tipoStr.includes('receita')) {
-                    tipo = 'Receber';
-                } else {
-                    // Fallback: se não tiver coluna 'Tipo', verifica se tem fornecedor
-                    const colStr = chaves.join(' ').toLowerCase();
-                    if (colStr.includes('fornecedor') || getCol(['Fornecedor (Nome Fantasia)'])) {
-                        tipo = 'Pagar';
-                    }
-                }
+                let tipo = tipoOriginal.toLowerCase().includes('pagar') ? 'Pagar' : 'Receber';
 
                 let statusNorm = 'Pendente';
                 const sitLower = situacao.toString().toLowerCase();
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
-                
                 const dataVen = new Date(dataFormatada);
 
                 if (sitLower.includes('pago') || sitLower.includes('recebido') || sitLower.includes('liquidado')) {
